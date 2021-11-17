@@ -3,15 +3,16 @@ import 'flatpickr/dist/flatpickr.min.css';
 import { Notify } from 'notiflix/build/notiflix-notify-aio';
 
 const refs = {
-  inputTime: document.querySelector('#datetime-picker'),
+  myInput: document.querySelector('#datetime-picker'),
   btnStart: document.querySelector('[data-start]'),
   faceDays: document.querySelector('[data-days]'),
-  faceHours: document.querySelector('[data-hours]'),
+  faceHourse: document.querySelector('[data-hours]'),
   faceMinutes: document.querySelector('[data-minutes]'),
   faceSeconds: document.querySelector('[data-seconds]'),
 };
 
 const TIME_STEP = 1000;
+let idTimer = null;
 
 const options = {
   enableTime: true,
@@ -19,45 +20,43 @@ const options = {
   defaultDate: new Date(),
   minuteIncrement: 1,
   onClose(selectedDates) {
-    const choiceDate = selectedDates[0];
+    if (selectedDates[0] < options.defaultDate)
+      return Notify.failure('Please choose a date in the future');
 
-    if (choiceDate <= options.defaultDate) {
-      Notify.failure('Please choose a date in the future');
-      return;
-    }
     refs.btnStart.removeAttribute('disabled');
-
-    refs.btnStart.addEventListener('click', () => {
-      Notify.info('Timer is running;)');
-      refs.btnStart.disabled = true;
-      refs.inputTime.disabled = true;
-
-      const idTime = setInterval(() => {
-        if (choiceDate < Date.now()) {
-          Notify.success('Ooooops... Countdown finished ♥');
-
-          refs.inputTime.removeAttribute('disabled');
-          clearInterval(idTime);
-          return false;
-        }
-
-        const timeLeft = choiceDate - Date.now();
-
-        const calculatedValues = convertMs(timeLeft);
-
-        const { daysValid, hoursValid, minutesValid, secondsValid } =
-          addLeadingZero(calculatedValues);
-
-        refs.faceDays.textContent = `${daysValid}`;
-        refs.faceHours.textContent = `${hoursValid}`;
-        refs.faceMinutes.textContent = `${minutesValid}`;
-        refs.faceSeconds.textContent = `${secondsValid}`;
-      }, TIME_STEP);
-    });
   },
 };
-const flatP = flatpickr(refs.inputTime, options);
-console.log('🚀 ~ flatP', flatP);
+
+const timer = flatpickr(refs.myInput, options);
+
+refs.btnStart.addEventListener('click', onStartCountdown);
+
+function onStartCountdown(e) {
+  Notify.info('Timer is running;)');
+
+  refs.btnStart.disabled = true;
+  refs.myInput.disabled = true;
+
+  idTimer = setInterval(() => {
+    const selectedUserTime = timer.selectedDates[0];
+
+    if (selectedUserTime < Date.now()) {
+      Notify.success('Ooooops... Countdown finished ♥');
+
+      refs.myInput.removeAttribute('disabled');
+      clearInterval(idTimer);
+      return false;
+    }
+
+    const remainingTime = selectedUserTime - Date.now();
+
+    const conversTime = convertMs(remainingTime);
+
+    const [days, hours, minutes, seconds] = preparingData(conversTime);
+
+    changeTimer([days, hours, minutes, seconds]);
+  }, TIME_STEP);
+}
 
 function convertMs(ms) {
   const second = 1000;
@@ -69,15 +68,25 @@ function convertMs(ms) {
   const hours = Math.floor((ms % day) / hour);
   const minutes = Math.floor(((ms % day) % hour) / minute);
   const seconds = Math.floor((((ms % day) % hour) % minute) / second);
-
   return { days, hours, minutes, seconds };
 }
 
-function addLeadingZero({ days, hours, minutes, seconds }) {
-  const secondsValid = seconds.toString().padStart(2, 0);
-  const minutesValid = minutes.toString().padStart(2, 0);
-  const hoursValid = hours.toString().padStart(2, 0);
-  const daysValid = days.toString().padStart(3, 0);
-
-  return { daysValid, hoursValid, minutesValid, secondsValid };
+function addLeadingZero(value, lengthStr) {
+  return String(value).padStart(lengthStr, '0');
 }
+
+function preparingData(obj) {
+  return Object.values(obj).map((item, index, array) => {
+    return array.indexOf(array[0]) === index ? addLeadingZero(item, 3) : addLeadingZero(item, 2);
+  });
+}
+
+function changeTimer([days, hours, minutes, seconds]) {
+  refs.faceDays.textContent = days;
+  refs.faceHourse.textContent = hours;
+  refs.faceMinutes.textContent = minutes;
+  refs.faceSeconds.textContent = seconds;
+}
+
+
+

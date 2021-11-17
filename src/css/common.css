@@ -25,10 +25,11 @@ button {
   border: none;
   display: inline-block;
 }
-#datetime-picker {
+input {
   height: 33px;
   font-size: 20px;
   color: rgb(65, 14, 95);
+  margin-bottom: 10px;
 }
 
 .timer {
